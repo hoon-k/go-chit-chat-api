@@ -1,0 +1,118 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TYPE roles AS ENUM ('member', 'admin', 'moderator');
+
+CREATE TABLE authors
+(
+    uuid uuid NOT NULL DEFAULT uuid_generate_v4(),
+    first_name character varying(255),
+    last_name character varying(255),
+    screen_name character varying(255) NOT NULL,
+    created_date timestamp with time zone NOT NULL DEFAULT now(),
+    role roles NOT NULL DEFAULT 'member'::roles,
+    CONSTRAINT authors_pkey PRIMARY KEY (uuid)
+);
+
+CREATE TABLE topics
+(
+    title character varying(255) NOT NULL,
+    uuid uuid NOT NULL DEFAULT uuid_generate_v4(),
+    created_date timestamp with time zone NOT NULL DEFAULT now(),
+    author uuid NOT NULL,
+    post_count integer NOT NULL,
+    CONSTRAINT topics_pkey PRIMARY KEY (uuid),
+    CONSTRAINT author_fkey FOREIGN KEY (author)
+        REFERENCES public.authors (uuid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+
+CREATE TABLE posts
+(
+    body text NOT NULL,
+    author uuid NOT NULL DEFAULT uuid_generate_v4(),
+    created_date timestamp with time zone NOT NULL DEFAULT now(),
+    uuid uuid NOT NULL DEFAULT uuid_generate_v4(),
+    topic_id uuid NOT NULL,
+    CONSTRAINT posts_pkey PRIMARY KEY (uuid),
+    CONSTRAINT author_fkey FOREIGN KEY (author)
+        REFERENCES public.authors (uuid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT topic_fkey FOREIGN KEY (topic_id)
+        REFERENCES public.topics (uuid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+
+CREATE OR REPLACE PROCEDURE create_starter_post(post_body text, author_id uuid, topic_title character varying)
+LANGUAGE sql
+AS $$
+    WITH topic_insert AS (
+        INSERT 
+        INTO topics (title, author, post_count)
+        VALUES (
+            topic_title,
+            author_id,
+            1
+        )
+        RETURNING uuid
+    )
+
+    INSERT
+    INTO posts (body, author, topic_id)
+    VALUES (post_body, author_id, (SELECT uuid FROM topic_insert));
+$$;
+
+CREATE OR REPLACE PROCEDURE create_post(post_body text, author_id uuid, topic_id uuid)
+LANGUAGE sql
+AS $$
+    INSERT
+    INTO posts (body, author, topic_id)
+    VALUES (post_body, author_id, topic_id);
+
+    UPDATE topics
+    SET post_count = post_count + 1
+    WHERE uuid = topic_id;
+$$;
+
+CREATE OR REPLACE PROCEDURE delete_post(topic_id uuid, post_id uuid)
+LANGUAGE sql
+AS $$
+    DELETE
+    FROM posts
+    WHERE uuid = post_id;
+
+    UPDATE topics
+    SET post_count = post_count - 1
+    WHERE uuid = topic_id;
+
+    DELETE
+    FROM topics
+    WHERE post_count <= 0
+$$;
+
+CREATE OR REPLACE FUNCTION get_posts(topic_id uuid)
+RETURNS TABLE (title character varying, body text, screen_name character varying, created_date timestamp with time zone)
+AS $BODY$
+    SELECT t.title, p.body, a.screen_name, p.created_date
+    FROM posts p
+    LEFT JOIN topics t on t.uuid=topic_id
+    LEFT JOIN authors a on a.uuid = p.author
+    WHERE p.topic_id = topic_id
+    ORDER BY p.created_date
+$BODY$
+LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION get_all_topics()
+RETURNS TABLE (title character varying, screen_name character varying, created_date timestamp with time zone)
+AS $BODY$
+    SELECT t.title, a.screen_name, t.created_date
+    FROM topics t
+    LEFT JOIN authors a on t.author = a.uuid
+    ORDER BY t.created_date
+$BODY$
+LANGUAGE sql;
+
+INSERT
+INTO authors(screen_name)
+VALUES ('TestAuthor');
