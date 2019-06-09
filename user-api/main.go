@@ -4,11 +4,14 @@ import (
     "database/sql"
     "fmt"
     "log"
+    "net/http"
 
+    "github.com/julienschmidt/httprouter"
     _ "github.com/lib/pq"
 )
 
-func main() {
+// Index function
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     connStr := "user=postgres password=Password1! dbname=chitchat_users port=5433 sslmode=disable"
     db, err := sql.Open("postgres", connStr)
     defer db.Close()
@@ -29,8 +32,13 @@ func main() {
         }
 
         log.Println(firstName, lastName)
-        fmt.Printf("Name is %v %v\n", firstName, lastName)
+        fmt.Fprintf(w, "Name is %s %s\n", firstName, lastName)
     }
+}
 
-	fmt.Printf("hello, world user api\n")
+func main() {
+    router := httprouter.New()
+    router.GET("/", Index)
+
+    log.Fatal(http.ListenAndServe(":8080", router))
 }
