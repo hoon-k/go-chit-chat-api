@@ -1,35 +1,63 @@
 package main
 
 import (
-	"database/sql"
+	// "database/sql"
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq"
+    "github.com/streadway/amqp"
+	// _ "github.com/lib/pq"
 )
 
 func main() {
-    connStr := "user=postgres password=Password1! dbname=pqgotest port=5433"
-    db, err := sql.Open("postgres", connStr)
-    if err != nil {
-        log.Fatal(err)
-    }
+    conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+    failOnError(err, "Failed to connect to RabbitMQ")
+    defer conn.Close()
 
-    rows, _ := db.Query("SELECT first_name, last_name FROM users")
-    defer rows.Close()
+    ch, err := conn.Channel()
+    failOnError(err, "Failed to open a channel")
+    defer ch.Close()    
 
-    firstName := ""
-    lastName := ""
+    fmt.Printf("hello, world discussion api\n")
+    
+    q, err := ch.QueueDeclare(
+        "hello", // name
+        false,   // durable
+        false,   // delete when usused
+        false,   // exclusive
+        false,   // no-wait
+        nil,     // arguments
+    )
 
-    for rows.Next() {
-        err := rows.Scan(&firstName, &lastName)
-        if err != nil {
-            log.Fatal(err)
+    failOnError(err, "Failed to declare a queue")
+
+    msgs, err := ch.Consume(
+        q.Name, // queue
+        "",     // consumer
+        true,   // auto-ack
+        false,  // exclusive
+        false,  // no-local
+        false,  // no-wait
+        nil,    // args
+    )
+
+    failOnError(err, "Failed to register a consumer")
+
+    forever := make(chan bool)
+
+    go func() {
+        for d := range msgs {
+            log.Printf("Received a message: %s", d.Body)
         }
+    }()
 
-        log.Println(firstName, lastName)
-        fmt.Printf("Name is %v %v", firstName, lastName)
-    }
+    log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 
-	fmt.Printf("hello, world discussion api\n")
+    <-forever
 }
+
+func failOnError(err error, msg string) {
+    if err != nil {
+        log.Fatalf("%s: %s", msg, err)
+    }
+  }
