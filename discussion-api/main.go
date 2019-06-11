@@ -21,8 +21,8 @@ func main() {
     fmt.Printf("hello, world discussion api\n")
     
     q, err := ch.QueueDeclare(
-        "hello", // name
-        false,   // durable
+        "task_queue", // name
+        true,   // durable
         false,   // delete when usused
         false,   // exclusive
         false,   // no-wait
@@ -31,10 +31,16 @@ func main() {
 
     failOnError(err, "Failed to declare a queue")
 
+    err = ch.Qos(
+        1,     // prefetch count
+        0,     // prefetch size
+        false, // global
+    )
+
     msgs, err := ch.Consume(
         q.Name, // queue
         "",     // consumer
-        true,   // auto-ack
+        false,   // auto-ack
         false,  // exclusive
         false,  // no-local
         false,  // no-wait
@@ -52,9 +58,14 @@ func main() {
     <-forever
 }
 
+func createAuthor() {
+    
+}
+
 func receiveMessage(msgs <-chan amqp.Delivery) {
     for d := range msgs {
         log.Printf("Received a message: %s", d.Body)
+        d.Ack(false)
     }
 }
 
