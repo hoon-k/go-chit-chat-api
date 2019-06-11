@@ -55,17 +55,16 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
         panic(err)
     }
 
-    fmt.Fprintf(w, "Post is %s %s\n", req.FirstName, req.Data.Point)
-    // db, err := sql.Open("postgres", connStr)
-    // defer db.Close()
-    // if err != nil {
-    //     log.Fatal(err)
-    // }
+    log.Printf("Post is %s %s\n", req.FirstName, req.LastName)
+    db := getDBConnection()
+    defer db.Close()
 
     // r.
 
-    // rows, err := db.Query("CALL create_member_user(?, ?, ?, ?)", )
+    _, err = db.Query(`CALL create_member_user($1, $2, $3, $4)`, req.UserName, req.Password, req.FirstName, req.LastName)
     // defer rows.Close()
+
+    failOnError(err, "Unable to create new user")
 
     // conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
     // failOnError(err, "Failed to connect to RabbitMQ")
