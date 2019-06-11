@@ -69,8 +69,8 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 func main() {
     router := httprouter.New()
     router.GET("/", Index)
-    router.POST("/account/create", Create)
-    // router.POST("/account/list", List)
+    router.POST("/account/create", create)
+    router.GET("/account/list", list)
     // router.POST("/account/:id", Single)
 
     log.Fatal(http.ListenAndServe(":8081", router))
