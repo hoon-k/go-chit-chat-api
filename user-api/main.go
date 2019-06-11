@@ -11,14 +11,12 @@ import (
     "github.com/streadway/amqp"
 )
 
+var conn *amqp.Connection
+
 // Index function
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-    connStr := "user=postgres password=Password1! dbname=chitchat_users port=5433 sslmode=disable"
-    db, err := sql.Open("postgres", connStr)
+    db := getDBConnection()
     defer db.Close()
-    if err != nil {
-        log.Fatal(err)
-    }
 
     rows, err := db.Query("SELECT first_name, last_name FROM users")
     defer rows.Close()
@@ -36,8 +34,7 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
         fmt.Fprintf(w, "Name is %s %s\n", firstName, lastName)
     }
 
-    conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-    failOnError(err, "Failed to connect to RabbitMQ")
+    conn := getMQConnection()
     defer conn.Close()
 
     ch, err := conn.Channel()
@@ -72,16 +69,28 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 func main() {
     router := httprouter.New()
     router.GET("/", Index)
-
-    
+    router.POST("/account/create", Create)
+    // router.POST("/account/list", List)
+    // router.POST("/account/:id", Single)
 
     log.Fatal(http.ListenAndServe(":8081", router))
+}
 
-   
+func getDBConnection() *sql.DB {
+    connStr := "user=postgres password=Password1! dbname=chitchat_users port=5433 sslmode=disable"
+    db, err := sql.Open("postgres", connStr)
+    failOnError(err, "Failed to connect to DB")
+    return db
+}
+
+func getMQConnection() *amqp.Connection {
+    conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+    failOnError(err, "Failed to connect to RabbitMQ")
+    return conn
 }
 
 func failOnError(err error, msg string) {
-  if err != nil {
-    log.Fatalf("%s: %s", msg, err)
-  }
+    if err != nil {
+        log.Fatalf("%s: %s", msg, err)
+    }
 }

@@ -1,12 +1,12 @@
 package main
 
 import (
-	// "database/sql"
-	"fmt"
-	"log"
+    // "database/sql"
+    "fmt"
+    "log"
 
     "github.com/streadway/amqp"
-	// _ "github.com/lib/pq"
+    // _ "github.com/lib/pq"
 )
 
 func main() {
@@ -45,15 +45,17 @@ func main() {
 
     forever := make(chan bool)
 
-    go func() {
-        for d := range msgs {
-            log.Printf("Received a message: %s", d.Body)
-        }
-    }()
+    go receiveMessage(msgs)
 
     log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 
     <-forever
+}
+
+func receiveMessage(msgs <-chan amqp.Delivery) {
+    for d := range msgs {
+        log.Printf("Received a message: %s", d.Body)
+    }
 }
 
 func failOnError(err error, msg string) {
