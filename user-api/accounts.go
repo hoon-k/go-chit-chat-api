@@ -10,7 +10,8 @@ import (
 
     "github.com/julienschmidt/httprouter"
     _ "github.com/lib/pq"
-    "github.com/streadway/amqp"
+    // "github.com/streadway/amqp"
+    "go-chit-chat-api/mq"
 )
 
 type aData struct {
@@ -70,42 +71,11 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
     failOnError(err, "Unable to create new user")
 
-    conn := getMQConnection()
-    failOnError(err, "Failed to connect to RabbitMQ")
-    defer conn.Close()
-
-    ch, err := conn.Channel()
-    failOnError(err, "Failed to open a channel")
-    defer ch.Close()
-
-    q, err := ch.QueueDeclare(
-        "task_queue",   // name
-        true,           // durable
-        false,          // delete when unused
-        false,          // exclusive
-        false,          // no-wait
-        nil,            // arguments
-    )
-
-    failOnError(err, "Failed to declare a queue")
-
     msg := &createUserMessage {
         UserName: req.UserName,
         FirstName: req.FirstName,
         LastName: req.LastName,
     }
 
-    b, _ := json.Marshal(msg)
-
-    err = ch.Publish(
-        "",     // exchange
-        q.Name, // routing key
-        false,  // mandatory
-        false,  // immediate
-        amqp.Publishing {
-            ContentType: "application/json",
-            Body:        b,
-    })
-
-    failOnError(err, "Failed to publish a message")
+    mq.SendMessages(msg, "task_queue")
 }
