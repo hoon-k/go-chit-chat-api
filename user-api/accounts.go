@@ -2,6 +2,7 @@ package main
 
 import (
     "encoding/json"
+    "io/ioutil"
     // "database/sql"
     "fmt"
     "log"
@@ -59,10 +60,7 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     db := getDBConnection()
     defer db.Close()
 
-    // r.
-
     _, err = db.Query(`CALL create_member_user($1, $2, $3, $4)`, req.UserName, req.Password, req.FirstName, req.LastName)
-    // defer rows.Close()
 
     failOnError(err, "Unable to create new user")
 
@@ -85,7 +83,7 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
     failOnError(err, "Failed to declare a queue")
 
-    body := "Hello World!"
+    body, _ := ioutil.ReadAll(r.Body)
 
     err = ch.Publish(
         "",     // exchange
