@@ -19,6 +19,7 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     defer db.Close()
 
     rows, err := db.Query("SELECT first_name, last_name FROM users")
+    failOnError(err, "Query execution failure")
     defer rows.Close()
 
     var firstName string
@@ -34,36 +35,36 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
         fmt.Fprintf(w, "Name is %s %s\n", firstName, lastName)
     }
 
-    conn := getMQConnection()
-    defer conn.Close()
+//     conn := getMQConnection()
+//     defer conn.Close()
 
-    ch, err := conn.Channel()
-    failOnError(err, "Failed to open a channel")
-    defer ch.Close()
+//     ch, err := conn.Channel()
+//     failOnError(err, "Failed to open a channel")
+//     defer ch.Close()
 
-    q, err := ch.QueueDeclare(
-        "hello", // name
-        false,   // durable
-        false,   // delete when unused
-        false,   // exclusive
-        false,   // no-wait
-        nil,     // arguments
-    )
+//     q, err := ch.QueueDeclare(
+//         "hello", // name
+//         false,   // durable
+//         false,   // delete when unused
+//         false,   // exclusive
+//         false,   // no-wait
+//         nil,     // arguments
+//     )
 
-    failOnError(err, "Failed to declare a queue")
+//     failOnError(err, "Failed to declare a queue")
 
-    body := "Hello World!"
+//     body := "Hello World!"
 
-    err = ch.Publish(
-        "",     // exchange
-        q.Name, // routing key
-        false,  // mandatory
-        false,  // immediate
-        amqp.Publishing {
-            ContentType: "text/plain",
-            Body:        []byte(body),
-    })
-    failOnError(err, "Failed to publish a message")
+//     err = ch.Publish(
+//         "",     // exchange
+//         q.Name, // routing key
+//         false,  // mandatory
+//         false,  // immediate
+//         amqp.Publishing {
+//             ContentType: "text/plain",
+//             Body:        []byte(body),
+//     })
+//     failOnError(err, "Failed to publish a message")
 }
 
 func main() {

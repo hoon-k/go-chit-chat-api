@@ -2,7 +2,7 @@ package main
 
 import (
     "encoding/json"
-    "io/ioutil"
+    // "io/ioutil"
     // "database/sql"
     "fmt"
     "log"
@@ -24,6 +24,12 @@ type createUserRequest struct {
     LastName string `json:"lastName"`
     Data aData `json:"aData"`
 
+}
+
+type createUserMessage struct {
+    UserName string
+    FirstName string
+    LastName string
 }
 
 func list(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -83,7 +89,13 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
     failOnError(err, "Failed to declare a queue")
 
-    body, _ := ioutil.ReadAll(r.Body)
+    msg := &createUserMessage {
+        UserName: req.UserName,
+        FirstName: req.FirstName,
+        LastName: req.LastName,
+    }
+
+    b, _ := json.Marshal(msg)
 
     err = ch.Publish(
         "",     // exchange
@@ -91,8 +103,9 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
         false,  // mandatory
         false,  // immediate
         amqp.Publishing {
-            ContentType: "text/plain",
-            Body:        []byte(body),
+            ContentType: "application/json",
+            Body:        b,
     })
-    // failOnError(err, "Failed to publish a message")
+
+    failOnError(err, "Failed to publish a message")
 }

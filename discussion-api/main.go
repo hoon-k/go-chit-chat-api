@@ -64,7 +64,7 @@ func createAuthor() {
 
 func receiveMessage(msgs <-chan amqp.Delivery) {
     for d := range msgs {
-        log.Printf("Received a message: %s", d.Body)
+        log.Printf("Received a message: %s", string(d.Body))
         d.Ack(false)
     }
 }
