@@ -77,5 +77,23 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     rows.Scan(&msg.FirstName, &msg.LastName, &msg.UserName, &msg.Role)
 
     // mq.SendMessageToQueue(&msg, "task_queue")
-    mq.SendMessageToExchange(&msg, "chitchat")
+    mq.SendMessageToRoute(&msg, "chitchat", "userCreated")
+}
+
+func update(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    msg := createUserMessage{
+        UserName: "Updated!",
+    }
+    mq.SendMessageToRoute(&msg, "chitchat", "userUpdated")
+
+    fmt.Fprintf(w, "Updated and sending msg: %s", "userUpdated")
+}
+
+func delete(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    msg := createUserMessage{
+        UserName: "Deleted!",
+    }
+    mq.SendMessageToRoute(&msg, "chitchat", "userDeleted")
+
+    fmt.Fprintf(w, "Deleted and sending msg: %s", "userDeleted")
 }

@@ -5,13 +5,22 @@ import (
     "fmt"
     "log"
     "go-chit-chat-api/mq"
+    "net/http"
+
+    "github.com/julienschmidt/httprouter"
     "github.com/streadway/amqp"
     // _ "github.com/lib/pq"
 )
 
 func main() {
-    // msgs, conn, ch := mq.ReceiveMessageFromQueue("task_queue")
-    msgs, conn, ch := mq.ReceiveMessageFromExchange("chitchat")
+    router := httprouter.New()
+    router.GET("/posts/create", create)
+    go http.ListenAndServe(":8082", router)
+    receiveMessages()
+}
+
+func receiveMessages() {
+    msgs, conn, ch := mq.ReceiveMessageFromMultipleRoutes("chitchat", []string {"userCreated", "userDeleted"})
     defer conn.Close()
     defer ch.Close()
 
@@ -32,7 +41,7 @@ func createAuthor() {
 
 func processMessages(msgs <-chan amqp.Delivery) {
     for d := range msgs {
-        log.Printf("Received a message: %s", string(d.Body))
+        log.Printf("Received a message in discussion api: %s with route key of %s", string(d.Body), string(d.RoutingKey))
         d.Ack(false)
     }
 }

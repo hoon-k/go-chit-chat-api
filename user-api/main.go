@@ -40,6 +40,8 @@ func main() {
     router := httprouter.New()
     router.GET("/", Index)
     router.POST("/account/create", create)
+    router.GET("/account/update", update)
+    router.GET("/account/delete", delete)
     router.GET("/account/list", list)
     // router.POST("/account/:id", Single)
 
