@@ -114,11 +114,14 @@ func declareExchange(ch *amqp.Channel, exchangeName string, exchangeType Exchang
 }
 
 func declareQueue(ch *amqp.Channel, queueName string) amqp.Queue {
+    durable := queueName != ""
+    exclusive := queueName == ""
+
     q, err := ch.QueueDeclare(
         queueName,      // name
-        true,           // durable
+        durable,           // durable
         false,          // delete when unused
-        false,          // exclusive
+        exclusive,          // exclusive
         false,          // no-wait
         nil,            // arguments
     )
