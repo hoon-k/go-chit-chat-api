@@ -119,9 +119,9 @@ func declareQueue(ch *amqp.Channel, queueName string) amqp.Queue {
 
     q, err := ch.QueueDeclare(
         queueName,      // name
-        durable,           // durable
+        durable,        // durable
         false,          // delete when unused
-        exclusive,          // exclusive
+        exclusive,      // exclusive
         false,          // no-wait
         nil,            // arguments
     )
@@ -159,13 +159,13 @@ func publishMessage(ch *amqp.Channel, exchangeName string, queueName string, mes
 
 func consumeMessages(ch *amqp.Channel, queueName string) <-chan amqp.Delivery {
     msgs, err := ch.Consume(
-        queueName, // queue
-        "",     // consumer
-        false,   // auto-ack
-        false,  // exclusive
-        false,  // no-local
-        false,  // no-wait
-        nil,    // args
+        queueName,  // queue
+        "",         // consumer
+        false,      // auto-ack
+        false,      // exclusive
+        false,      // no-local
+        false,      // no-wait
+        nil,        // args
     )
 
     failOnError(err, "Failed to register a consumer")
