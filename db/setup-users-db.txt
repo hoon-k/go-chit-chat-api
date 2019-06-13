@@ -13,7 +13,7 @@ CREATE TABLE users
 );
 
 -- Create account table.
-CREATE TABLE account
+CREATE TABLE accounts
 (
     username character varying(255) NOT NULL,
     password character varying(255) NOT NULL,
@@ -22,26 +22,25 @@ CREATE TABLE account
     role roles NOT NULL DEFAULT 'member'::roles,
     user_id uuid NOT NULL,
     created_date timestamp with time zone NOT NULL DEFAULT now(),
-    CONSTRAINT account_pkey PRIMARY KEY (uuid),
-    CONSTRAINT account_fkey FOREIGN KEY (user_id)
+    CONSTRAINT accounts_pkey PRIMARY KEY (uuid),
+    CONSTRAINT accounts_fkey FOREIGN KEY (user_id)
         REFERENCES users (uuid) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
 );
 
--- Create stored procedre to create a member
-CREATE OR REPLACE PROCEDURE create_member_user(un character varying, pw character varying, fn character varying, ln character varying)
-LANGUAGE 'sql'
+CREATE OR REPLACE FUNCTION create_user(un character varying, pw character varying, fn character varying, ln character varying, rl roles default 'member')
+RETURNS TABLE (first_name character varying, last_name character varying, username character varying, role roles)
 AS $BODY$
     WITH user_insert AS (
         INSERT 
         INTO users (first_name, last_name)
         VALUES (fn, ln)
-        RETURNING uuid
+        RETURNING uuid, first_name, last_name
     )
 
     INSERT
-    INTO account (
+    INTO accounts (
         username,
         password,
         role,
@@ -49,9 +48,22 @@ AS $BODY$
     VALUES (
         un,
         crypt(pw, gen_salt('bf', 8)),
-        'member',
+        rl,
         (SELECT uuid FROM user_insert)
-    );
+    )
+	RETURNING
+		(SELECT first_name FROM user_insert),
+		(SELECT last_name FROM user_insert),
+		username,
+		role;
+$BODY$
+LANGUAGE sql;
+
+CREATE OR REPLACE PROCEDURE delete_user(uid uuid)
+LANGUAGE 'sql'
+AS $BODY$
+	DELETE FROM accounts where user_id = uid;
+    DELETE FROM users where uuid = uid;
 $BODY$;
 
 -- Create function to authenticate a member
@@ -59,10 +71,10 @@ CREATE OR REPLACE FUNCTION authenticate_user(un character varying, pw character 
 RETURNS TABLE (user_id uuid, role roles)
 AS $BODY$
     SELECT user_id, role 
-    FROM account 
+    FROM accounts 
     WHERE username = un AND password = crypt(pw, password); 
 $BODY$
 LANGUAGE sql;
 
 -- Create initial admin user.
-CALL create_member_user('admin', 'admin', 'Admin', 'Admin');
+SELECT * FROM create_user('admin', 'admin', 'Admin', 'Admin', 'admin');

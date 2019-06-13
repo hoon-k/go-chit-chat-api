@@ -6,32 +6,76 @@ import (
     "github.com/streadway/amqp"
 )
 
+// ExchangeType indicates the type of MQ exhange
+type ExchangeType string
+
+const (
+    // DirectExchange type
+    DirectExchange ExchangeType = "direct"
+
+    // FanoutExchange type
+    FanoutExchange ExchangeType = "fanout"
+
+    // TopicExchange type
+    TopicExchange ExchangeType = "topic"
+
+    // HeadersExchange type
+    HeadersExchange ExchangeType = "headers"
+
+    // DefaultExchange type
+    DefaultExchange ExchangeType = ""
+)
+
 var conn *amqp.Connection
 
-// SendMessages sends MQ message
-func SendMessages(msg interface{}, queueName string) {
+// SendMessagesToDefaultExchange sends message to default exchange
+func SendMessagesToDefaultExchange(msg interface{}, queueName string) {
+    SendMessages(msg, DefaultExchange, "", queueName)
+}
+
+// SendMessages sends message
+func SendMessages(msg interface{}, exchangeType ExchangeType, exchangeName string, queueName string) {
     conn := connect()
     defer conn.Close()
 
     ch := createChannel(conn)
     defer ch.Close()
 
+    if exchangeType != DefaultExchange {
+        declareExchange(ch, exchangeName, exchangeType)
+    }
+
     q := declareQueue(ch, queueName)
 
-    b, _ := json.Marshal(msg)
+    msgStr, _ := json.Marshal(msg)
 
-    publishMessage(ch, q.Name, b)
+    publishMessage(ch, exchangeName, q.Name, msgStr)
 }
 
-// GetMessages gets MQ message
-func GetMessages(queueName string) (<-chan amqp.Delivery,*amqp.Connection, *amqp.Channel) {
+// GetMessagesFromDefaultExchange gets message from default exchange
+func GetMessagesFromDefaultExchange(queueName string) (<-chan amqp.Delivery,*amqp.Connection, *amqp.Channel) {
+    return GetMessages(queueName, DefaultExchange, "")
+}
+
+// GetMessages gets message
+func GetMessages(queueName string, exchangeType ExchangeType, exchangeName string) (<-chan amqp.Delivery,*amqp.Connection, *amqp.Channel) {
     conn := connect()
     // defer conn.Close()
 
     ch := createChannel(conn)
     // defer ch.Close()
 
-    msgs := consumeMessages(ch, queueName)
+    if exchangeType != DefaultExchange {
+        declareExchange(ch, exchangeName, exchangeType)
+    }
+
+    q := declareQueue(ch, queueName)
+
+    if exchangeType != DefaultExchange {
+        bindQueueToExchange(ch, exchangeName, q.Name)
+    }
+
+    msgs := consumeMessages(ch, q.Name)
 
     return msgs, conn, ch
 }
@@ -55,6 +99,20 @@ func createChannel(conn *amqp.Connection) *amqp.Channel {
     return ch
 }
 
+func declareExchange(ch *amqp.Channel, exchangeName string, exchangeType ExchangeType) {
+    err := ch.ExchangeDeclare(
+        exchangeName,           // name
+        string(exchangeType),   // type
+        true,                   // durable
+        false,                  // auto-deleted
+        false,                  // internal
+        false,                  // no-wait
+        nil,                    // arguments
+    )
+
+    failOnError(err, "Failed to declare an exchange")
+}
+
 func declareQueue(ch *amqp.Channel, queueName string) amqp.Queue {
     q, err := ch.QueueDeclare(
         queueName,      // name
@@ -70,14 +128,26 @@ func declareQueue(ch *amqp.Channel, queueName string) amqp.Queue {
     return q
 }
 
-func publishMessage(ch *amqp.Channel, queueName string, message []byte) {
+func bindQueueToExchange(ch *amqp.Channel, exchangeName string, queueName string) {
+    err := ch.QueueBind(
+        queueName,      // queue name
+        "",             // routing key
+        exchangeName,   // exchange
+        false,
+        nil,
+    )
+
+    failOnError(err, "Failed to bind a queue")
+}
+
+func publishMessage(ch *amqp.Channel, exchangeName string, queueName string, message []byte) {
     err := ch.Publish(
-        "",     // exchange
-        queueName, // routing key
-        false,  // mandatory
-        false,  // immediate
+        exchangeName,   // exchange
+        queueName,      // routing key
+        false,          // mandatory
+        false,          // immediate
         amqp.Publishing {
-            ContentType: "application/json",
+            ContentType: "text/plain",
             Body:        message,
     })
 

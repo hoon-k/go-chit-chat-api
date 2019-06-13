@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-    msgs, conn, ch := mq.GetMessages("task_queue")
+    msgs, conn, ch := mq.GetMessagesFromDefaultExchange("task_queue")
     defer conn.Close()
     defer ch.Close()
 

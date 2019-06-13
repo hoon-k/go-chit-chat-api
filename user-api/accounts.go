@@ -31,6 +31,7 @@ type createUserMessage struct {
     UserName string
     FirstName string
     LastName string
+    Role string
 }
 
 func list(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -67,15 +68,13 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     db := getDBConnection()
     defer db.Close()
 
-    _, err = db.Query(`CALL create_member_user($1, $2, $3, $4)`, req.UserName, req.Password, req.FirstName, req.LastName)
+    rows, err := db.Query(`SELECT * FROM create_user($1, $2, $3, $4)`, req.UserName, req.Password, req.FirstName, req.LastName)
 
     failOnError(err, "Unable to create new user")
+    
+    msg := createUserMessage{}
+    rows.Next()
+    rows.Scan(&msg.FirstName, &msg.LastName, &msg.UserName, &msg.Role)
 
-    msg := &createUserMessage {
-        UserName: req.UserName,
-        FirstName: req.FirstName,
-        LastName: req.LastName,
-    }
-
-    mq.SendMessages(msg, "task_queue")
+    mq.SendMessagesToDefaultExchange(&msg, "task_queue")
 }
