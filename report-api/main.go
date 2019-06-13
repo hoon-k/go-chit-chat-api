@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-    // msgs, conn, ch := mq.GetMessagesFromDefaultExchange("task_queue")
-    msgs, conn, ch := mq.GetMessages("", mq.FanoutExchange, "chitchat")
+    // msgs, conn, ch := mq.ReceiveMessageFromQueue("task_queue")
+    msgs, conn, ch := mq.ReceiveMessageFromExchange("chitchat")
     defer conn.Close()
     defer ch.Close()
 

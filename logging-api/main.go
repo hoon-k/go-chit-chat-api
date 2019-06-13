@@ -15,7 +15,7 @@ func main() {
     defer conn.Close()
     defer ch.Close()
 
-    fmt.Printf("hello, world discussion api\n")
+    fmt.Printf("hello, world reports api\n")
 
     forever := make(chan bool)
 
@@ -24,10 +24,6 @@ func main() {
     log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 
     <-forever
-}
-
-func createAuthor() {
-    
 }
 
 func processMessages(msgs <-chan amqp.Delivery) {

@@ -76,6 +76,6 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     rows.Next()
     rows.Scan(&msg.FirstName, &msg.LastName, &msg.UserName, &msg.Role)
 
-    // mq.SendMessagesToDefaultExchange(&msg, "task_queue")
-    mq.SendMessages(&msg, mq.FanoutExchange, "chitchat", "")
+    // mq.SendMessageToQueue(&msg, "task_queue")
+    mq.SendMessageToExchange(&msg, "chitchat")
 }
