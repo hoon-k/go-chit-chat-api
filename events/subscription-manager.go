@@ -33,8 +33,6 @@ func (m *SubscriptionManager) AddSubscription(event Event, handler IHandler) {
     if m.ch != nil {
         mq.BindQueueToExchange(m.ch, exchange, m.queueName, routeKey)
     }
-
-    log.Printf("AddSubscription")
 }
 
 // RemoveSubscription removes an event handler
