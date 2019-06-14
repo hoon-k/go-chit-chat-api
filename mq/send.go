@@ -2,6 +2,7 @@ package mq
 
 import (
     "encoding/json"
+
     "github.com/streadway/amqp"
 )
 
@@ -21,16 +22,16 @@ func SendMessageToRoute(msg interface{}, exchangeName string, routeKey string) {
 }
 
 func sendMessage(msg interface{}, exchangeType ExchangeType, exchangeName string, queueName string, routeKey string, isDurable bool) {
-    conn := connect()
+    conn := Connect()
     defer conn.Close()
 
-    ch := createChannel(conn)
+    ch := CreateChannel(conn)
     defer ch.Close()
 
     if exchangeType != DefaultExchange {
-        declareExchange(ch, exchangeName, exchangeType, isDurable)
+        DeclareExchange(ch, exchangeName, exchangeType, isDurable)
     } else {
-        q := declareQueue(ch, queueName, isDurable)
+        q := DeclareQueue(ch, queueName, isDurable)
         routeKey = q.Name
     }
 

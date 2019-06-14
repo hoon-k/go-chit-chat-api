@@ -1,8 +1,8 @@
 package mq
 
 import (
-    // "encoding/json"
     "log"
+
     "github.com/streadway/amqp"
 )
 
@@ -26,14 +26,15 @@ const (
     DefaultExchange ExchangeType = ""
 )
 
-
-func connect() *amqp.Connection {
+// Connect to MQ
+func Connect() *amqp.Connection {
     conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
     failOnError(err, "Failed to connect to RabbitMQ")
     return conn
 }
 
-func createChannel(conn *amqp.Connection) *amqp.Channel {
+// CreateChannel from MQ connection
+func CreateChannel(conn *amqp.Connection) *amqp.Channel {
     ch, err := conn.Channel()
 
     err = ch.Qos(
@@ -46,7 +47,8 @@ func createChannel(conn *amqp.Connection) *amqp.Channel {
     return ch
 }
 
-func declareExchange(ch *amqp.Channel, exchangeName string, exchangeType ExchangeType, isDurable bool) {
+// DeclareExchange declares exchange
+func DeclareExchange(ch *amqp.Channel, exchangeName string, exchangeType ExchangeType, isDurable bool) {
     err := ch.ExchangeDeclare(
         exchangeName,           // name
         string(exchangeType),   // type
@@ -60,7 +62,8 @@ func declareExchange(ch *amqp.Channel, exchangeName string, exchangeType Exchang
     failOnError(err, "Failed to declare an exchange")
 }
 
-func declareQueue(ch *amqp.Channel, queueName string, isDurable bool) amqp.Queue {
+// DeclareQueue declares queue
+func DeclareQueue(ch *amqp.Channel, queueName string, isDurable bool) amqp.Queue {
     isExclusive := queueName == ""
 
     q, err := ch.QueueDeclare(

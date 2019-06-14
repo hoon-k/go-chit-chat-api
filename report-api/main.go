@@ -1,48 +1,33 @@
 package main
 
 import (
-    // "database/sql"
-    "fmt"
     "log"
-    "go-chit-chat-api/mq"
+
     "go-chit-chat-api/events"
-    "github.com/streadway/amqp"
-    // _ "github.com/lib/pq"
 )
 
-type myHandler struct {}
+type userCreatedHandler struct {}
+type userDeletedHandler struct {}
+type postCreatedHandler struct {}
 
 func main() {
     manager := event.ManagerInstance()
 
-    manager.AddSubscription(event.UserCreated, &myHandler{})
+    manager.AddSubscription(event.UserCreated, &userCreatedHandler{})
+    manager.AddSubscription(event.UserDeleted, &userDeletedHandler{})
+    manager.AddSubscription(event.PostCreated, &postCreatedHandler{})
 
-    receiveMessages();
+    manager.WaitForMessagesForDispatching()
 }
 
-func receiveMessages() {
-    msgs, conn, ch := mq.ReceiveMessageFromMultipleRoutes("chitchat", []string {"userCreated", "userDeleted", "postCreated"})
-    defer conn.Close()
-    defer ch.Close()
-
-    fmt.Printf("hello, world reports api\n")
-
-    forever := make(chan bool)
-
-    go processMessages(msgs)
-
-    log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-
-    <-forever
+func (h *userCreatedHandler) Handle(msg interface{}, e event.Event) {
+    log.Printf("Handling %s event with message %s", string(e), msg)
 }
 
-func processMessages(msgs <-chan amqp.Delivery) {
-    for d := range msgs {
-        log.Printf("Received a message in report api: %s with route key of %s", string(d.Body), string(d.RoutingKey))
-        d.Ack(false)
-    }
+func (h *userDeletedHandler) Handle(msg interface{}, e event.Event) {
+    log.Printf("Handling %s event with message %s", string(e), msg)
 }
 
-func (h *myHandler) Handle(interface{}, event.Event) {
-
+func (h *postCreatedHandler) Handle(msg interface{}, e event.Event) {
+    log.Printf("Handling %s event with message %s", string(e), msg)
 }

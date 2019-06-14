@@ -24,33 +24,8 @@ func ReceiveMessageFromMultipleRoutes(exchangeName string, routeKeys []string) (
     return receiveMessage("", DirectExchange, exchangeName, routeKeys, false, true)
 }
 
-func receiveMessage(queueName string, exchangeType ExchangeType, exchangeName string, routeKeys []string, isDurableQueue bool, isDurableExchange bool) (<-chan amqp.Delivery,*amqp.Connection, *amqp.Channel) {
-    conn := connect()
-
-    ch := createChannel(conn)
-
-    if exchangeType != DefaultExchange {
-        declareExchange(ch, exchangeName, exchangeType, isDurableExchange)
-    }
-
-    q := declareQueue(ch, queueName, isDurableQueue)
-
-    if exchangeType != DefaultExchange {
-        if len(routeKeys) == 1 {
-            bindQueueToExchange(ch, exchangeName, q.Name, routeKeys[0])
-        } else {
-            for _, routeKey := range routeKeys {
-                bindQueueToExchange(ch, exchangeName, q.Name, routeKey)
-            }
-        }
-    }
-
-    msgs := consumeMessages(ch, q.Name)
-
-    return msgs, conn, ch
-}
-
-func bindQueueToExchange(ch *amqp.Channel, exchangeName string, queueName string, routeKey string) {
+// BindQueueToExchange binds queue to exchange
+func BindQueueToExchange(ch *amqp.Channel, exchangeName string, queueName string, routeKey string) {
     err := ch.QueueBind(
         queueName,      // queue name
         routeKey,       // routing key
@@ -62,7 +37,8 @@ func bindQueueToExchange(ch *amqp.Channel, exchangeName string, queueName string
     failOnError(err, "Failed to bind a queue")
 }
 
-func consumeMessages(ch *amqp.Channel, queueName string) <-chan amqp.Delivery {
+// ConsumeMessages consumes messages
+func ConsumeMessages(ch *amqp.Channel, queueName string) <-chan amqp.Delivery {
     msgs, err := ch.Consume(
         queueName,  // queue
         "",         // consumer
@@ -76,4 +52,30 @@ func consumeMessages(ch *amqp.Channel, queueName string) <-chan amqp.Delivery {
     failOnError(err, "Failed to register a consumer")
 
     return msgs
+}
+
+func receiveMessage(queueName string, exchangeType ExchangeType, exchangeName string, routeKeys []string, isDurableQueue bool, isDurableExchange bool) (<-chan amqp.Delivery,*amqp.Connection, *amqp.Channel) {
+    conn := Connect()
+
+    ch := CreateChannel(conn)
+
+    if exchangeType != DefaultExchange {
+        DeclareExchange(ch, exchangeName, exchangeType, isDurableExchange)
+    }
+
+    q := DeclareQueue(ch, queueName, isDurableQueue)
+
+    if exchangeType != DefaultExchange {
+        if len(routeKeys) == 1 {
+            BindQueueToExchange(ch, exchangeName, q.Name, routeKeys[0])
+        } else {
+            for _, routeKey := range routeKeys {
+                BindQueueToExchange(ch, exchangeName, q.Name, routeKey)
+            }
+        }
+    }
+
+    msgs := ConsumeMessages(ch, q.Name)
+
+    return msgs, conn, ch
 }
