@@ -8,10 +8,19 @@ import (
 
     "github.com/julienschmidt/httprouter"
     _ "github.com/lib/pq"
-    "github.com/streadway/amqp"
 )
 
-var conn *amqp.Connection
+type myMiddleware interface {
+    intercept(w http.ResponseWriter, r *http.Request) error
+}
+
+type myrouter struct {
+    middlewares []myMiddleware
+    router *httprouter.Router
+}
+
+type mw1 struct {}
+type mw2 struct {}
 
 // Index function
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -43,9 +52,18 @@ func main() {
     router.GET("/account/update", update)
     router.GET("/account/delete", delete)
     router.GET("/account/list", list)
-    // router.POST("/account/:id", Single)
+    router.GET("/account/retreive/:id", single)
 
-    log.Fatal(http.ListenAndServe(":8081", router))
+    mRouter := &myrouter {
+        router: router,
+    }
+
+    mRouter.middlewares = []myMiddleware {
+        &mw1{},
+        &mw2{},
+    }
+
+    log.Fatal(http.ListenAndServe(":8081", mRouter))
 }
 
 func getDBConnection() *sql.DB {
@@ -59,4 +77,27 @@ func failOnError(err error, msg string) {
     if err != nil {
         log.Fatalf("%s: %s", msg, err)
     }
+}
+
+func (h *myrouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    log.Printf("Serving %s", r.URL.Path)
+
+    for _, mw := range h.middlewares {
+        err := mw.intercept(w, r)
+        failOnError(err, "Failed on middleware")
+    }
+
+    header := w.Header()
+    header.Add("Content-Type", "application/json")
+    h.router.ServeHTTP(w, r)
+}
+
+func (m mw1) intercept(w http.ResponseWriter, r *http.Request) error {
+    log.Printf("Intercepted on m1")
+    return nil
+}
+
+func (m mw2) intercept(w http.ResponseWriter, r *http.Request) error {
+    log.Printf("Intercepted on m2")
+    return nil
 }

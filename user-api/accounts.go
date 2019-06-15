@@ -32,6 +32,8 @@ type createUserMessage struct {
     FirstName string
     LastName string
     Role string
+    IsSafe bool
+    Age int
 }
 
 func list(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -83,10 +85,15 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 func update(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     msg := createUserMessage{
         UserName: "Updated!",
+        IsSafe: true,
+        Age: 30,
     }
     mq.SendMessageToRoute(&msg, "chitchat", "userUpdated")
 
-    fmt.Fprintf(w, "Updated and sending msg: %s", "userUpdated")
+    // fmt.Fprintf(w, "Updated and sending msg: %s", "userUpdated")
+
+    res, _ := json.Marshal(msg)
+    w.Write(res)
 }
 
 func delete(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -96,4 +103,17 @@ func delete(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     mq.SendMessageToRoute(&msg, "chitchat", "userDeleted")
 
     fmt.Fprintf(w, "Deleted and sending msg: %s", "userDeleted")
+}
+
+func single(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+    msg := createUserMessage{
+        UserName: "Updated!",
+        IsSafe: true,
+        Age: 30,
+    }
+
+    fmt.Fprintf(w, "Updated and sending msg: %s", p.ByName("id"))
+
+    res, _ := json.Marshal(msg)
+    w.Write(res)
 }
