@@ -14,11 +14,6 @@ import (
     "go-chit-chat-api/middlewares/validators"
 )
 
-type myrouter struct {
-    middlewares []middlewares.Middleware
-    router *httprouter.Router
-}
-
 // Index function
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     db := getDBConnection()
@@ -43,16 +38,13 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func main() {
-    mRouter := &myrouter {
-        router: initializeRouter(),
-    }
+    router := initializeRouter()
+    mrRouter := middlewares.CreateManagedRouter(router)
 
-    mRouter.middlewares = []middlewares.Middleware {
-        &logger.Logger{},
-        &request.SchemaValidator{},
-    }
+    mrRouter.Add(&logger.Logger{})
+    mrRouter.Add(&request.SchemaValidator{})
 
-    log.Fatal(http.ListenAndServe(":8081", mRouter))
+    log.Fatal(http.ListenAndServe(":8081", mrRouter))
 }
 
 func getDBConnection() *sql.DB {
@@ -66,17 +58,4 @@ func failOnError(err error, msg string) {
     if err != nil {
         log.Fatalf("%s: %s", msg, err)
     }
-}
-
-func (h *myrouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    log.Printf("Serving %s", r.URL.Path)
-
-    for _, mw := range h.middlewares {
-        err := mw.Intercept(w, r)
-        failOnError(err, "Failed on middleware")
-    }
-
-    header := w.Header()
-    header.Add("Content-Type", "application/json")
-    h.router.ServeHTTP(w, r)
 }
