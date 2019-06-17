@@ -25,6 +25,12 @@ type SubscriptionManager struct {
     handlers map[string][]IHandler
 }
 
+// Publish publishes event to MQ
+func (m *SubscriptionManager) Publish(event Event, msg interface{}) {
+    routeKey := string(event)
+    mq.SendMessageToRoute(&msg, exchange, routeKey)
+}
+
 // AddSubscription adds an event handler
 func (m *SubscriptionManager) AddSubscription(event Event, handler IHandler) {
     routeKey := string(event)
@@ -93,7 +99,7 @@ func (m *SubscriptionManager) createQueue() {
 
 func (m *SubscriptionManager) dispatchMessage(msgs <-chan amqp.Delivery) {
     for d := range msgs {
-        log.Printf("Received a message in report api: %s with route key of %s", string(d.Body), string(d.RoutingKey))
+        // log.Printf("Received a message in report api: %s with route key of %s", string(d.Body), string(d.RoutingKey))
         routeKey := string(d.RoutingKey)
         for _, handler := range m.handlers[routeKey] {
             handler.Handle(string(d.Body), Event(routeKey))

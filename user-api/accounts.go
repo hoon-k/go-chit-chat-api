@@ -2,16 +2,14 @@ package main
 
 import (
     "encoding/json"
-    // "io/ioutil"
-    // "database/sql"
     "fmt"
     "log"
     "net/http"
 
     "github.com/julienschmidt/httprouter"
     _ "github.com/lib/pq"
-    // "github.com/streadway/amqp"
-    "go-chit-chat-api/mq"
+
+    "go-chit-chat-api/events"
 )
 
 type aData struct {
@@ -78,8 +76,8 @@ func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     rows.Next()
     rows.Scan(&msg.FirstName, &msg.LastName, &msg.UserName, &msg.Role)
 
-    // mq.SendMessageToQueue(&msg, "task_queue")
-    mq.SendMessageToRoute(&msg, "chitchat", "userCreated")
+    manager := event.ManagerInstance()
+    manager.Publish(event.UserCreated, &msg)
 }
 
 func update(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -88,9 +86,9 @@ func update(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
         IsSafe: true,
         Age: 30,
     }
-    mq.SendMessageToRoute(&msg, "chitchat", "userUpdated")
 
-    // fmt.Fprintf(w, "Updated and sending msg: %s", "userUpdated")
+    manager := event.ManagerInstance()
+    manager.Publish(event.UserUpdated, &msg)
 
     res, _ := json.Marshal(msg)
     w.Write(res)
@@ -100,7 +98,9 @@ func delete(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     msg := createUserMessage{
         UserName: "Deleted!",
     }
-    mq.SendMessageToRoute(&msg, "chitchat", "userDeleted")
+
+    manager := event.ManagerInstance()
+    manager.Publish(event.UserDeleted, &msg)
 
     fmt.Fprintf(w, "Deleted and sending msg: %s", "userDeleted")
 }
