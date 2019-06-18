@@ -51,20 +51,31 @@ AS $BODY$
         rl,
         (SELECT uuid FROM user_insert)
     )
-	RETURNING
-		(SELECT first_name FROM user_insert),
-		(SELECT last_name FROM user_insert),
-		username,
-		role;
+    RETURNING
+        (SELECT first_name FROM user_insert),
+        (SELECT last_name FROM user_insert),
+        username,
+        role;
 $BODY$
 LANGUAGE sql;
 
-CREATE OR REPLACE PROCEDURE delete_user(uid uuid)
-LANGUAGE 'sql'
+CREATE OR REPLACE FUNCTION delete_user(uid uuid)
+RETURNS TABLE (username character varying, first_name character varying, last_name character varying)
 AS $BODY$
-	DELETE FROM accounts where user_id = uid;
-    DELETE FROM users where uuid = uid;
-$BODY$;
+    with user_delete AS (
+        DELETE FROM users where uuid = uid
+        RETURNING
+            first_name,
+            last_name
+    )
+
+    DELETE FROM accounts where user_id = uid
+    RETURNING
+        username,
+        (SELECT first_name from user_delete),
+        (SELECT last_name from user_delete);
+$BODY$
+LANGUAGE sql;
 
 -- Create function to authenticate a member
 CREATE OR REPLACE FUNCTION authenticate_user(un character varying, pw character varying)
@@ -72,7 +83,7 @@ RETURNS TABLE (user_id uuid, role roles)
 AS $BODY$
     SELECT user_id, role 
     FROM accounts 
-    WHERE username = un AND password = crypt(pw, password); 
+    WHERE username = un AND password = crypt(pw, password);
 $BODY$
 LANGUAGE sql;
 
