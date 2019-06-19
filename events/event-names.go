@@ -18,4 +18,7 @@ const (
 
     // PostDeleted event
     PostDeleted Event = "postDeleted"
+
+    // ChatMessagePublished event
+    ChatMessagePublished = "chatMessagePublished"
 )
