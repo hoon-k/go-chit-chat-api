@@ -7,3 +7,16 @@ type CreateUserRequest struct {
     FirstName string `json:"firstName"`
     LastName string `json:"lastName"`
 }
+
+// User model
+type User struct {
+    FirstName string
+    LastName string
+    Role string
+}
+
+// UserResults model
+type UserResults struct {
+    TotalNumber int
+    Users []User
+}

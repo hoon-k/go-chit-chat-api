@@ -41,23 +41,28 @@ func DeleteUser(id string) (*models.DeleteUserMessage, error) {
 }
 
 // GetAllUsers lists all users
-func GetAllUsers() {
+func GetAllUsers() *models.UserResults {
     db := getDBConnection()
     defer db.Close()
 
     rows, _ := db.Query("SELECT first_name, last_name FROM users")
     defer rows.Close()
 
-    var firstName string
-    var lastName string
+    userResults := &models.UserResults{}
 
+    count := 0
     for rows.Next() {
-        err := rows.Scan(&firstName, &lastName)
-        if err != nil {
-            // log.Fatal(err)
-        }
+        user := &models.User{}
+        err := rows.Scan(&user.FirstName, &user.LastName)
+        
+        failOnError(err, "Unable to get a list of users")
 
-        // log.Println(firstName, lastName)
-        // fmt.Fprintf(w, "Name is %s %s\n", firstName, lastName)
+        userResults.Users = append(userResults.Users, *user)
+
+        count = count + 1
     }
+
+    userResults.TotalNumber = count
+
+    return userResults
 }

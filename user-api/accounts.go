@@ -15,7 +15,10 @@ import (
 )
 
 func list(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-    services.GetAllUsers()
+    list := services.GetAllUsers()
+
+    res, _ := json.Marshal(list)
+    w.Write(res)
 }
 
 func create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
