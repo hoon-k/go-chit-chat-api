@@ -1,8 +1,11 @@
 package main
 
 import (
+    // "encoding/json"
     "log"
     "net/http"
+    "io"
+    "time"
 
     "go-chit-chat-api/events"
     "go-chit-chat-api/middlewares"
@@ -12,11 +15,14 @@ import (
     "github.com/julienschmidt/httprouter"
 )
 
-type messageReceivedHandler struct {
-    writer http.ResponseWriter
-    req *http.Request
-    params httprouter.Params
+type messageReceivedHandler struct {}
+
+type message struct {
+    SentTime string
+    Message string
 }
+
+var messages = make(chan string)
 
 func main() {
     router := initializeRouter()
@@ -25,36 +31,43 @@ func main() {
     mrRouter.Add(&logger.Logger{})
     mrRouter.Add(&request.SchemaValidator{})
 
-    log.Fatal(http.ListenAndServe(":8085", mrRouter))
+    go http.ListenAndServe(":8085", mrRouter)
+
+    manager := event.ManagerInstance()
+    manager.AddSubscription(event.ChatMessagePublished, &messageReceivedHandler{})
+    manager.WaitForMessagesForDispatching()
 }
 
 func initializeRouter() *httprouter.Router {
     router := httprouter.New()
     router.GET("/live-chat/push", pushMessage)
-    router.GET("/live-chat/pull", pullMessage)
+    router.GET("/live-chat/poll", pollMessage)
 
     return router
 }
 
 func pushMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     manager := event.ManagerInstance()
-    manager.Publish(event.ChatMessagePublished, "some message")
+
+    msg := &message{
+        SentTime: time.Now().Local().String(),
+        Message: "some message",
+    }
+
+    log.Printf("Message %s", msg)
+
+    manager.Publish(event.ChatMessagePublished, msg)
 }
 
-func pullMessage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-    manager := event.ManagerInstance()
-    manager.AddSubscription(event.ChatMessagePublished, &messageReceivedHandler{
-        writer: w,
-        req: r,
-        params: p,
-    })
-    manager.WaitForMessagesForDispatching()
+func pollMessage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+    io.WriteString(w, <-messages)
 }
 
-func (h *messageReceivedHandler) Handle(msg interface{}, e event.Event) {
-    log.Printf("Handling %s event with message %s %v", string(e), msg.(string), h.writer)
+func (h *messageReceivedHandler) Handle(msg []byte, e event.Event) {
+    log.Printf("Handling %s event with message %s", string(e), msg)
 
     // res, _ := json.Marshal(msg)
-    s := msg.(string)
-    h.writer.Write([]byte(s))
+    s := string(msg)
+    // res, _ := json.Marshal(msg)
+    messages <- s
 }

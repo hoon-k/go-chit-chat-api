@@ -18,10 +18,10 @@ func main() {
     manager.WaitForMessagesForDispatching()
 }
 
-func (h *userCreatedHandler) Handle(msg interface{}, e event.Event) {
+func (h *userCreatedHandler) Handle(msg []byte, e event.Event) {
     log.Printf("Handling %s event with message %s", string(e), msg)
 }
 
-func (h *userDeletedHandler) Handle(msg interface{}, e event.Event) {
+func (h *userDeletedHandler) Handle(msg []byte, e event.Event) {
     log.Printf("Handling %s event with message %s", string(e), msg)
 }

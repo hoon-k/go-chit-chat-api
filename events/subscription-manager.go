@@ -12,7 +12,7 @@ const exchange = "chitchat"
 
 // IHandler interface
 type IHandler interface {
-    Handle(interface{}, Event)
+    Handle([]byte, Event)
 }
 
 var instance *SubscriptionManager
@@ -102,7 +102,7 @@ func (m *SubscriptionManager) dispatchMessage(msgs <-chan amqp.Delivery) {
         // log.Printf("Received a message in report api: %s with route key of %s", string(d.Body), string(d.RoutingKey))
         routeKey := string(d.RoutingKey)
         for _, handler := range m.handlers[routeKey] {
-            handler.Handle(string(d.Body), Event(routeKey))
+            handler.Handle(d.Body, Event(routeKey))
         }
         d.Ack(false)
     }
