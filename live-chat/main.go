@@ -1,7 +1,6 @@
 package main
 
 import (
-    // "encoding/json"
     "log"
     "net/http"
     "io"
@@ -65,9 +64,6 @@ func pollMessage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 func (h *messageReceivedHandler) Handle(msg []byte, e event.Event) {
     log.Printf("Handling %s event with message %s", string(e), msg)
-
-    // res, _ := json.Marshal(msg)
     s := string(msg)
-    // res, _ := json.Marshal(msg)
     messages <- s
 }
