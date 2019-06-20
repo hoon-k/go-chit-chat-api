@@ -1,0 +1,72 @@
+version: "3.4"
+services:
+    user.api:
+        image: go-chit-chat-api/user-api:${TAG:-latest}
+        build:
+            context: .
+            dockerfile: src/user-api/dockerfile
+        depends_on:
+            - sql.data
+            - rabbitmq
+    discussion.api:
+        image: go-chit-chat-api/discussion-api:${TAG:-latest}
+        build:
+            context: .
+            dockerfile: src/discussion-api/dockerfile
+        depends_on:
+            - sql.data
+            - rabbitmq
+    reports.api:
+        image: go-chit-chat-api/reports-api:${TAG:-latest}
+        build:
+            context: .
+            dockerfile: src/reports-api/dockerfile
+        depends_on:
+            - sql.data
+            - rabbitmq
+    cache.data:
+        image: redis
+    sql.data:
+        image: postgres:latest
+        volumes:
+            - src/db-init/.:/docker-entrypoint-initdb.d
+        restart: always
+    noSql.data:
+        image: mongoDB
+        restart: always
+    rabbitmq:
+        image: rabbitmq:3-management
+    adminer:
+        image: adminer
+        restart: always
+        depends_on:
+            - sql.data
+    mongo-express:
+        image: mongo-express
+        restart: always
+        depends_on:
+            - noSql.data
+    mobile.bff:
+        image: chit-chat-api/api-gateway/mobile-bff:${TAG:-latest}
+        build:
+            context: .
+            dockerfile: src/api-gateway/mobile-bff/dockerfile
+        depends_on:
+            - user.api
+            - discussion.api
+            - reports.api
+            - sql.data
+            - noSql.data
+            - rabbitmq
+    web.bff:
+        image: chit-chat-api/api-gateway/web-bff:${TAG:-latest}
+        build:
+            context: .
+            dockerfile: src/api-gateway/web-bff/dockerfile
+        depends_on:
+            - user.api
+            - discussion.api
+            - reports.api
+            - sql.data
+            - noSql.data
+            - rabbitmq
