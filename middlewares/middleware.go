@@ -42,5 +42,6 @@ func (mr *ManagedRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
     header := w.Header()
     header.Add("Content-Type", "application/json")
+    header.Add("Access-Control-Allow-Origin", "*")
     mr.router.ServeHTTP(w, r)
 }
