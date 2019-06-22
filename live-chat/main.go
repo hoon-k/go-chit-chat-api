@@ -1,10 +1,11 @@
 package main
 
 import (
+    "encoding/json"
     "log"
     "net/http"
     "io"
-    "time"
+    // "time"
 
     "go-chit-chat-api/events"
     "go-chit-chat-api/middlewares"
@@ -17,8 +18,8 @@ import (
 type messageReceivedHandler struct {}
 
 type message struct {
-    SentTime string
-    Message string
+    SentTime string `json:"sentTime"`
+    Message string `json:"message"`
 }
 
 var messages = make(chan string)
@@ -39,19 +40,26 @@ func main() {
 
 func initializeRouter() *httprouter.Router {
     router := httprouter.New()
-    router.GET("/live-chat/push", pushMessage)
+    router.POST("/live-chat/push", pushMessage)
     router.GET("/live-chat/poll", pollMessage)
 
     return router
 }
 
 func pushMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    decoder := json.NewDecoder(r.Body)
+    var msg message
+    err := decoder.Decode(&msg)
+    if err != nil {
+        panic(err)
+    }
+
     manager := event.ManagerInstance()
 
-    msg := &message{
-        SentTime: time.Now().Local().String(),
-        Message: "some message",
-    }
+    // msg := &message{
+    //     SentTime: time.Now().Local().String(),
+    //     Message: "some message",
+    // }
 
     log.Printf("Message %s", msg)
 
