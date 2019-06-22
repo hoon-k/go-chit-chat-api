@@ -5,7 +5,6 @@ import (
     "log"
     "net/http"
     "io"
-    // "time"
 
     "go-chit-chat-api/events"
     "go-chit-chat-api/middlewares"
@@ -19,9 +18,14 @@ import (
 type messageReceivedHandler struct {}
 
 type message struct {
+    UserID int `json:"userID"`
     ChannelID string `json:"channelID"`
     SentTime string `json:"sentTime"`
     Message string `json:"message"`
+}
+
+type channel struct {
+    ChannelID string `json:"channelID"`
 }
 
 var chatChannels = make(map[string]chan string)
@@ -45,6 +49,7 @@ func initializeRouter() *httprouter.Router {
     router := httprouter.New()
     router.POST("/live-chat/push", pushMessage)
     router.GET("/live-chat/poll", pollMessage)
+    router.GET("/live-chat/create", createChannel)
 
     return router
 }
@@ -53,38 +58,36 @@ func pushMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     decoder := json.NewDecoder(r.Body)
     var msg message
     err := decoder.Decode(&msg)
+    log.Printf("Message %v", msg)
     if err != nil {
         panic(err)
     }
 
     manager := event.ManagerInstance()
 
-    log.Printf("Message %s", msg)
+    log.Printf("Message %v", msg)
 
     manager.Publish(event.ChatMessagePublished, &msg)
 }
 
 func pollMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     chID := r.Header.Get("X-Channel-ID")
-    var messages chan string
-    var chIDToSend string
-    if chID != "" && chatChannels[chID] != nil {
-        messages = chatChannels[chID]
-        chIDToSend = chID
-    } else {
-        uuid, _ := uuid.NewUUID()
-        messages = make(chan string)
-        chatChannels[uuid.String()] = messages
-        chIDToSend = uuid.String()
-    }
+    log.Printf("Serving channel %s", chID)
 
-    msg := &message {
-        ChannelID: chIDToSend,
-    }
-    manager := event.ManagerInstance()
-    manager.Publish(event.ChatMessagePublished, msg)
-
+    messages := chatChannels[chID]
     io.WriteString(w, <-messages)
+}
+
+func createChannel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    uuid, _ := uuid.NewUUID()
+    messages := make(chan string)
+    chatChannels[uuid.String()] = messages
+    
+    res, _ := json.Marshal(&channel{
+        ChannelID: uuid.String(),
+    })
+    log.Printf("Channdel ID %s ", res)
+    w.Write(res)
 }
 
 func (h *messageReceivedHandler) Handle(msg []byte, e event.Event) {
