@@ -13,16 +13,19 @@ import (
     "go-chit-chat-api/middlewares/validators"
 
     "github.com/julienschmidt/httprouter"
+    "github.com/google/uuid"
 )
 
 type messageReceivedHandler struct {}
 
 type message struct {
+    ChannelID string `json:"channelID"`
     SentTime string `json:"sentTime"`
     Message string `json:"message"`
 }
 
-var messages = make(chan string)
+var chatChannels = make(map[string]chan string)
+// var messages = make(chan string)
 
 func main() {
     router := initializeRouter()
@@ -56,22 +59,41 @@ func pushMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
     manager := event.ManagerInstance()
 
-    // msg := &message{
-    //     SentTime: time.Now().Local().String(),
-    //     Message: "some message",
-    // }
-
     log.Printf("Message %s", msg)
 
-    manager.Publish(event.ChatMessagePublished, msg)
+    manager.Publish(event.ChatMessagePublished, &msg)
 }
 
-func pollMessage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func pollMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    chID := r.Header.Get("X-Channel-ID")
+    var messages chan string
+    var chIDToSend string
+    if chID != "" && chatChannels[chID] != nil {
+        messages = chatChannels[chID]
+        chIDToSend = chID
+    } else {
+        uuid, _ := uuid.NewUUID()
+        messages = make(chan string)
+        chatChannels[uuid.String()] = messages
+        chIDToSend = uuid.String()
+    }
+
+    msg := &message {
+        ChannelID: chIDToSend,
+    }
+    manager := event.ManagerInstance()
+    manager.Publish(event.ChatMessagePublished, msg)
+
     io.WriteString(w, <-messages)
 }
 
 func (h *messageReceivedHandler) Handle(msg []byte, e event.Event) {
     log.Printf("Handling %s event with message %s", string(e), msg)
     s := string(msg)
+
+    var receivedMsg message
+    json.Unmarshal(msg, &receivedMsg)
+    log.Printf("Channdel ID %s ", receivedMsg.ChannelID)
+    messages := chatChannels[receivedMsg.ChannelID]
     messages <- s
 }
