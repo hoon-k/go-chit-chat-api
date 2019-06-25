@@ -65,7 +65,6 @@ func pushMessage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
     decoder := json.NewDecoder(r.Body)
     var msg message
     err := decoder.Decode(&msg)
-    log.Printf("Message %v", msg)
     if err != nil {
         panic(err)
     }
