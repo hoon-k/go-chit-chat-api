@@ -28,6 +28,11 @@ type channel struct {
     ChannelID string `json:"channelID"`
 }
 
+type allChannels struct {
+    NumChannels int `json:"numChannels"`
+    ChannelIDs []string `json:"channelIDs"`
+}
+
 var chatChannels = make(map[string]chan string)
 // var messages = make(chan string)
 
@@ -50,6 +55,7 @@ func initializeRouter() *httprouter.Router {
     router.POST("/live-chat/push", pushMessage)
     router.GET("/live-chat/poll", pollMessage)
     router.GET("/live-chat/create", createChannel)
+    router.GET("/live-chat/channels", getAllChannels)
 
     return router
 }
@@ -90,13 +96,24 @@ func createChannel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
     w.Write(res)
 }
 
+func getAllChannels(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+    channels := &allChannels{};
+    channels.NumChannels = len(chatChannels)
+    for uuid := range chatChannels {
+        channels.ChannelIDs = append(channels.ChannelIDs, uuid)
+    }
+
+    res, _ := json.Marshal(channels)
+    w.Write(res)
+}
+
 func (h *messageReceivedHandler) Handle(msg []byte, e event.Event) {
-    log.Printf("Handling %s event with message %s", string(e), msg)
-    s := string(msg)
+    log.Printf("Handling %s event with message %s", string(e), string(msg))
+    // s := string(msg)
 
     var receivedMsg message
     json.Unmarshal(msg, &receivedMsg)
     log.Printf("Channdel ID %s ", receivedMsg.ChannelID)
     messages := chatChannels[receivedMsg.ChannelID]
-    messages <- s
+    messages <- string(msg)
 }
