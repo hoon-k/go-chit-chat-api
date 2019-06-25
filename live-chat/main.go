@@ -26,6 +26,7 @@ type message struct {
 
 type channel struct {
     ChannelID string `json:"channelID"`
+    OtherChannels []string `json:"otherChannelIDs"`
 }
 
 type allChannels struct {
@@ -88,10 +89,16 @@ func createChannel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
     uuid, _ := uuid.NewUUID()
     messages := make(chan string)
     chatChannels[uuid.String()] = messages
-    
-    res, _ := json.Marshal(&channel{
+
+    channel := &channel{
         ChannelID: uuid.String(),
-    })
+    }
+
+    for uuid := range chatChannels {
+        channel.OtherChannels = append(channel.OtherChannels, uuid)
+    }
+    
+    res, _ := json.Marshal(channel)
     log.Printf("Channdel ID %s ", res)
     w.Write(res)
 }
